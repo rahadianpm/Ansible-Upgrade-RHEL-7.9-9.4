@@ -1,0 +1,14 @@
+---
+- name: Leapp Pre-Upgrade RHEL 7.9 to 8.10
+  hosts: all
+  become: yes
+  tasks:
+
+  - name: Run Leapp preupgrade
+    command: leapp preupgrade --target 8.10
+    register: preupgrade_output
+    ignore_errors: yes
+
+  - name: Check for preupgrade issues
+    debug:
+      msg: "{{ preupgrade_output.stdout_lines }}"

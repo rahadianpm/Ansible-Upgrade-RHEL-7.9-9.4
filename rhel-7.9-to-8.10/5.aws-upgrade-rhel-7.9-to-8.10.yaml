@@ -1,0 +1,19 @@
+#### Playbook Upgrade
+---
+- name: Perform OS Upgrade RHEL 7.9 to 8.10
+  hosts: all
+  become: yes
+  tasks:
+
+  - name: Run Leapp upgrade
+    command: leapp upgrade --target 8.10
+    register: upgrade_output
+    ignore_errors: yes
+
+  - name: Print Leapp upgrade result
+    debug:
+      var: result
+
+  - name: Check for upgrade issues
+    debug:
+      msg: "{{ upgrade_output.stdout_lines }}"

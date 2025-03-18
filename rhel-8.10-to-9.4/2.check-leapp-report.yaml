@@ -1,0 +1,22 @@
+#### Check Leapp Report
+---
+- name: Check Leapp Report for remediation
+  hosts: all
+  become: yes
+  tasks:
+
+  - name: Check if Leapp preupgrade generated a report
+    stat:
+      path: /var/log/leapp/leapp-report.json
+    register: leapp_report
+    ignore_errors: yes
+
+  - name: Display Leapp report
+    command: cat /var/log/leapp/leapp-report.txt
+    when: leapp_report.stat.exists
+    register: leapp_report_content
+
+  - name: Output Leapp report
+    debug:
+      var: leapp_report_content.stdout_lines
+    when: leapp_report_content.stdout_lines is defined

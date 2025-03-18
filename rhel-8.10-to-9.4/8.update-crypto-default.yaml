@@ -1,0 +1,28 @@
+#### Playbook Pre-Upgrade
+---
+- name: Update Crypto Policy to Default
+  hosts: all
+  become: yes
+  tasks:
+
+  - name: Show current crypto policy
+    ansible.builtin.command:
+      cmd: update-crypto-policies --show
+    register: current_policy
+
+  - name: Display current crypto policy
+    ansible.builtin.debug:
+      msg: "Current crypto policy: {{ current_policy.stdout }}"
+
+  - name: Set crypto policy to DEFAULT
+    ansible.builtin.command:
+      cmd: update-crypto-policies --set DEFAULT
+
+  - name: Show updated crypto policy
+    ansible.builtin.command:
+      cmd: update-crypto-policies --show
+    register: updated_policy
+
+  - name: Display updated crypto policy
+    ansible.builtin.debug:
+      msg: "Updated crypto policy: {{ updated_policy.stdout }}"

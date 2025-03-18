@@ -1,0 +1,11 @@
+#### Reboot
+---
+- name: Reboot all systems in parallel
+  hosts: all
+  become: yes
+  tasks:
+
+    - name: Reboot the system simultaneously
+      reboot:
+      async: 1
+      poll: 0

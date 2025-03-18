@@ -1,0 +1,18 @@
+---
+- name: Install compat-openssl11-1.1.1k
+  hosts: all
+  become: yes
+  tasks:
+
+  - name: Install compat-openssl11-1.1.1k
+    yum:
+      name: compat-openssl11-1.1.1k
+      state: present
+
+  - name: Verify compat-openssl11 installation
+    command: rpm -q compat-openssl11-1.1.1k
+    register: verify_package
+
+  - name: Display final package status
+    debug:
+      msg: "{{ verify_package.stdout }}"

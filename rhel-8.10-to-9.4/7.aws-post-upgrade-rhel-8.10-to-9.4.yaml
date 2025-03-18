@@ -1,0 +1,22 @@
+#### Post Playbook Upgrade
+---
+- name: Post Upgrade OS RHEL 8.10 to 9.4
+  hosts: all
+  become: yes
+  tasks:
+
+  - name: Read /etc/redhat-release
+    command: cat /etc/redhat-release
+    register: redhat_release
+
+  - name: Display /etc/redhat-release
+    debug:
+      msg: "{{ redhat_release.stdout }}"
+
+  - name: Display kernel version
+    command: uname -r
+    register: kernel_version
+
+  - name: Show kernel version
+    debug:
+      msg: "Kernel version: {{ kernel_version.stdout }}"

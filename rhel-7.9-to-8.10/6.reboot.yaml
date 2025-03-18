@@ -1,0 +1,8 @@
+#### Reboot
+- name: Reboot All System
+  hosts: all
+  become: yes
+  tasks:
+
+    - name: Reboot the system
+      reboot:

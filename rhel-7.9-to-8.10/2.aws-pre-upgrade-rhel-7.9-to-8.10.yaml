@@ -1,0 +1,107 @@
+#### Playbook Pre-Upgrade
+---
+- name: Check Proxy
+  hosts: all
+  become: yes
+  tasks:
+
+  - name: Run curl command via proxy
+    command: >
+      curl -x http://NLB-NICEPAY-PG-RELAY-1-9e2438e5ec0d8ec0.elb.ap-southeast-3.amazonaws.com:8081 -L http://ifconfig.me
+    register: curl_output
+    changed_when: false
+    ignore_errors: yes
+
+  - name: Display the output
+    debug:
+      msg: "{{ curl_output.stdout }}"
+
+- name: Pre-Upgrade OS RHEL 7.9 to 8.10
+  hosts: all
+  become: yes
+  tasks:
+
+  - name: Ensure YUM plugins are enabled globally
+    lineinfile:
+      path: /etc/yum.conf
+      regexp: '^plugins='
+      line: 'plugins=1'
+      state: present
+
+  - name: Ensure subscription manager is enabled
+    ini_file:
+      path: /etc/yum/pluginconf.d/subscription-manager.conf
+      section: main
+      option: enabled
+      value: '1'
+
+  - name: Enable product-id plugin
+    lineinfile:
+      path: /etc/yum/pluginconf.d/product-id.conf
+      regexp: '^enabled='
+      line: 'enabled=1'
+      state: present
+
+  - name: Ensure subscription-manager is installed
+    yum:
+      name: subscription-manager
+      state: present
+
+  - name: Check subscription-manager status
+    command: subscription-manager status
+    register: subscription_status
+    ignore_errors: yes
+
+  - name: Display subscription-manager status
+    debug:
+      var: subscription_status.stdout_lines
+
+  - name: Enable subscription rhsm manage repo
+    command: subscription-manager config --rhsm.manage_repos=1
+    register: subscription_rhsm
+    ignore_errors: yes
+
+  - name: Display subscription rhsm manage repo status
+    debug:
+      var: subscription_rhsm.stdout_lines
+
+  - name: Enable Red Hat repositories
+    command: subscription-manager repos --enable {{ item }}
+    loop:
+      - rhel-7-server-rpms
+      - rhel-7-server-extras-rpms
+      - rhel-7-server-optional-rpms
+
+  - name: Unset subscription-manager release For Update to Latest Package
+    command: subscription-manager release --unset
+
+  - name: Enable RHUI Client Config repositories (/etc/yum.repos.d/redhat-rhui.repo)
+    command: yum-config-manager --enable {{ item }}
+      - rhui-client-config-server-7
+      - rhel-7-server-rhui-extras-rpms
+
+# Add if there's yum repo error
+  #- name: Clean Yum cache for ensuring have the latest package
+  #  command: yum clean all
+
+  - name: Install RHUI  & Leapp packages
+    yum:
+      name: "{{ item }}"
+      state: present
+    loop:
+        - rh-amazon-rhui-client
+        - leapp
+        - leapp-rhui-aws
+        - leapp-upgrade
+    register: package_install
+    ignore_errors: yes
+    failed_when: package_install is failed and "No package matching" not in package_install.msg
+
+  - name: Run Leapp preupgrade
+    command: leapp preupgrade --target 8.10
+    register: preupgrade_output
+    ignore_errors: yes
+
+  - name: Check for preupgrade issues
+    debug:
+      msg: "{{ preupgrade_output.stdout_lines }}"

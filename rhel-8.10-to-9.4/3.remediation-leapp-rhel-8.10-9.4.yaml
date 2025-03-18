@@ -1,0 +1,14 @@
+#### Post Playbook Upgrade
+---
+- name: Remediation RHEL 8.10 to 9.4
+  hosts: all
+  become: yes
+  tasks:
+
+  - name: Confirm VDO check
+    command: leapp answer --section check_vdo.confirm=True
+
+  - name: Install VDO package
+    ansible.builtin.dnf:
+      name: vdo
+      state: present

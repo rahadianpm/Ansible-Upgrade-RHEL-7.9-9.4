@@ -1,0 +1,78 @@
+#### Playbook Pre-Upgrade
+---
+- name: Configure DNF proxy settings and Display dnf.conf
+  hosts: all
+  become: yes
+  tasks:
+
+  - name: Add proxy to the end of /etc/dnf/dnf.conf
+    lineinfile:
+      path: /etc/dnf/dnf.conf
+      line: proxy=http://NLB-NICEPAY-PG-RELAY-1-9e2438e5ec0d8ec0.elb.ap-southeast-3.amazonaws.com:8081
+      insertafter: EOF
+    when: inventory_hostname not in ["SKY-PG-RELAY-1-A", "SKY-PG-RELAY-1-B"]
+
+  - name: Display contents of /etc/dnf/dnf.conf
+    command: cat /etc/dnf/dnf.conf
+    register: dnf_conf_contents
+
+  - name: Print dnf.conf contents
+    debug:
+      msg: "{{ dnf_conf_contents.stdout }}"
+
+- name: Pre-Upgrade OS RHEL 8.10 to 9.4
+  hosts: all
+  become: yes
+  tasks:
+  - name: Check subscription-manager status
+    command: subscription-manager status
+    register: subscription_status
+
+  - name: Display subscription-manager status
+    debug:
+      var: subscription_status.stdout_lines
+
+  - name: Enable Red Hat repositories
+    command: subscription-manager repos --enable {{ item }}
+    loop:
+      - rhel-8-for-x86_64-baseos-rpms
+      - rhel-8-for-x86_64-appstream-rpms
+      - rhel-8-for-x86_64-supplementary-rpms
+
+  #- name: Set system release version using rhui-set-release #Cloud
+  #  command: rhui-set-release --set 8.10
+
+  - name: Set system release version using rhsm-set-release
+    command: subscription-manager release --set 8.10
+
+  #- name: Enable RHUI repositories
+  #  shell: |
+  #    dnf config-manager --set-enabled rhui-client-config-server-8
+
+  - name: Install Leapp packages
+    ansible.builtin.dnf:
+      name: "{{ item }}"
+      state: present
+    loop:
+      #- rh-amazon-rhui-client
+      - leapp
+      #- leapp-rhui-aws
+      - leapp-upgrade
+    register: package_install
+    ignore_errors: yes
+    failed_when: package_install is failed and "No package matching" not in package_install.msg
+
+  - name: Update all packages to the latest version
+    ansible.builtin.dnf:
+      name: "*"
+      state: latest
+
+  - name: Run Leapp preupgrade
+    become: yes
+    command: leapp preupgrade --target=9.4
+    register: preupgrade_output
+    ignore_errors: yes
+
+  - name: Check for preupgrade issues
+    debug:
+      msg: "{{ preupgrade_output.stdout_lines }}"

@@ -1,0 +1,64 @@
+#### Post Playbook Upgrade
+---
+- name: Post-upgrade OS RHEL 7.9 to 8.10
+  hosts: all
+  become: yes
+  tasks:
+
+  - name: Comment out exclude line Python2 & Leapp7to8 in /etc/dnf/dnf.conf
+    lineinfile:
+      path: /etc/dnf/dnf.conf
+      regexp: '^exclude=python2-leapp,snactor,leapp-upgrade-el7toel8,leapp'
+      line: '#exclude=python2-leapp,snactor,leapp-upgrade-el7toel8,leapp'
+      state: present
+
+  - name: Remove Leapp repositories
+    yum_repository:
+      name: "{{ item }}"
+      state: absent
+    loop:
+      - leapp-preupgrade
+      - leapp-upgrade
+      - leapp
+    ignore_errors: yes
+
+  - name: Remove leapp packages with wildcard
+    shell: sudo yum remove '*leapp' -y && sudo yum remove 'leapp*' -y
+
+  - name: Disable RHEL 7 Repositories
+    shell: |
+      yum config-manager --set-disabled rhel-7-server-devtools-rhui-rpms
+      yum config-manager --set-disabled rhel-7-server-rhui-extras-rpms
+      yum config-manager --set-disabled rhel-7-server-rhui-rh-common-rpms
+      yum config-manager --set-disabled rhel-7-server-rhui-rpms
+      yum config-manager --set-disabled rhui-client-config-server-7
+
+  - name: Yum Clean  #Fixing This system is registered with an entitlement server, but is not receiving updates. You can use subscription-manager to assign subscriptions.
+    shell: |
+      yum clean all
+      rm -rf /var/cache/yum/*
+
+  - name: Refresh Subscription Manager
+    command: subscription-manager refresh
+    register: sub_status
+    ignore_errors: yes
+
+  - name: Debug Subscription Manager Output
+    debug:
+      msg: "{{ sub_status.stdout }}"
+
+  - name: Read /etc/redhat-release
+    command: cat /etc/redhat-release
+    register: redhat_release
+
+  - name: Display /etc/redhat-release
+    debug:
+      msg: "{{ redhat_release.stdout }}"
+
+  - name: Display kernel version
+    command: uname -r
+    register: kernel_version
+
+  - name: Show kernel version
+    debug:
+      msg: "Kernel version: {{ kernel_version.stdout }}"

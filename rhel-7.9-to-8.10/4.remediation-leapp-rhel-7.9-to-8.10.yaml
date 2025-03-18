@@ -1,0 +1,8 @@
+---
+- name: Remediation RHEL 7.9 to 8.10
+  hosts: all
+  become: yes
+  tasks:
+
+  - name: Confirm removal of pam_pkcs11 module
+    command: leapp answer --section remove_pam_pkcs11_module_check.confirm=True

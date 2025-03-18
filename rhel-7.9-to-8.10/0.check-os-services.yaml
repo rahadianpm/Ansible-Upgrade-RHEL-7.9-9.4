@@ -1,0 +1,41 @@
+---
+- name: Check OS & Services
+  hosts: all
+  become: yes
+  tasks:
+
+  - name: Check OS Versions only
+    shell: cat /etc/redhat-release
+    register: os_output
+
+  - name: Display OS Versions output
+    debug:
+      var: os_output.stdout
+
+  - name: Check if netstat is installed
+    shell: command -v netstat
+    register: netstat_check
+    ignore_errors: yes  # Prevent failure if netstat is missing
+
+  - name: Install net-tools (if netstat is missing)
+    yum:
+      name: net-tools
+      state: present
+    when: netstat_check.rc != 0
+
+  - name: Check services with netstat & OS Versions
+    shell: |
+      netstat -ntulpn
+      cat /etc/redhat-release
+    register: netstat_os_output
+
+  - name: Display formatted netstat output
+    debug:
+      msg: |
+        {{ netstat_os_output.stdout.split('\n') | select('match', '^\S') | join('\n') }}
+
+  - name: Create a formatted output file
+    copy:
+      content: |
+        {{ netstat_os_output.stdout.split('\n') | select('match', '^\S') | join('\n') }}
+      dest: /tmp/netstat_os_output.txt

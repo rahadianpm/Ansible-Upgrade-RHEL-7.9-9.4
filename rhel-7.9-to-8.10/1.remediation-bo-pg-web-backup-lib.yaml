@@ -1,0 +1,41 @@
+#### remediation-backup-libraries for fixing unable SSH & Login on BSD-PG-WEB & BSD-BO-WEB
+---
+- name: Backup and manage ld.so.conf.d
+  hosts: all
+  become: yes
+  tasks:
+
+  - name: (Before Backup) List contents of Backup Libraries /etc/ld.so.conf.d/
+    command: ls -larSth /etc/ld.so.conf.d/
+    register: ls_output
+    ignore_errors: yes
+
+  - name: Debug full output of ls_output
+    debug:
+      var: ls_output
+
+  - name: Create Backup Directory /root/ld-backup/
+    shell: mkdir /root/ld-backup/
+    ignore_errors: yes
+
+  - name: Ensure /root/ld-backup/ directory exists
+    file:
+      path: /root/ld-backup/
+      state: directory
+      owner: root
+      group: root
+      mode: '0755'
+
+  - name: Move Libraries ld.so.conf.d files to backup directory
+    command: mv /etc/ld.so.conf.d/* /root/ld-backup/
+
+  - name: Update Dynamic Libraries by Run ldconfig
+    command: ldconfig
+
+  - name:  (After Backup) List contents of Backup Libraries /etc/ld.so.conf.d/
+    command: ls -larSth /etc/ld.so.conf.d/
+    register: ls_output
+
+  - name: Debug full output of ls_output
+    debug:
+      var: ls_output
